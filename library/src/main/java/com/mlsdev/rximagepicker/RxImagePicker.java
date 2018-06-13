@@ -3,8 +3,6 @@ package com.mlsdev.rximagepicker;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentManager;
 import android.content.ClipData;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -15,6 +13,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
@@ -52,7 +52,7 @@ public class RxImagePicker extends Fragment {
             rxImagePickerFragment = new RxImagePicker();
             fragmentManager.beginTransaction()
                     .add(rxImagePickerFragment, TAG)
-                    .commit();
+                    .commitAllowingStateLoss();
         }
         return rxImagePickerFragment;
     }
@@ -87,6 +87,9 @@ public class RxImagePicker extends Fragment {
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
+        if (attachedSubject == null) {
+            return;
+        }
         attachedSubject.onNext(true);
         attachedSubject.onComplete();
     }
@@ -94,6 +97,9 @@ public class RxImagePicker extends Fragment {
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
+        if (attachedSubject == null) {
+            return;
+        }
         attachedSubject.onNext(true);
         attachedSubject.onComplete();
     }
@@ -169,18 +175,17 @@ public class RxImagePicker extends Fragment {
                 chooseCode = TAKE_PHOTO;
                 break;
             case GALLERY:
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    pictureChooseIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                    pictureChooseIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultipleImages);
-                    pictureChooseIntent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-                } else {
-                    pictureChooseIntent = new Intent(Intent.ACTION_GET_CONTENT);
-                }
+            case GALLERY_CHOOSER:
+                pictureChooseIntent = new Intent(Intent.ACTION_GET_CONTENT);
                 pictureChooseIntent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
                 pictureChooseIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 pictureChooseIntent.setType("image/*");
                 chooseCode = SELECT_PHOTO;
                 break;
+        }
+
+        if (imageSource == Sources.GALLERY_CHOOSER) {
+            pictureChooseIntent = Intent.createChooser(pictureChooseIntent, null);
         }
 
         startActivityForResult(pictureChooseIntent, chooseCode);
